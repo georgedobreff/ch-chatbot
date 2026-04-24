@@ -173,7 +173,7 @@ export async function POST(req: Request) {
             // Initial llm call
             let currentMessages: any[] = [...geminiMessages];
             let chat = await ai.models.generateContent({
-                model: "gemini-2.5-flash-lite",
+                model: "gemini-2.5-pro",
                 contents: currentMessages,
                 config: {
                     systemInstruction: systemInstruction,
@@ -236,7 +236,7 @@ export async function POST(req: Request) {
 
                 // Re-prompt LLM with new data
                 chat = await ai.models.generateContent({
-                    model: "gemini-2.5-flash-lite",
+                    model: "gemini-2.5-pro",
                     contents: currentMessages,
                     config: {
                         systemInstruction: systemInstruction,
