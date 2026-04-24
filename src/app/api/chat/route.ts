@@ -166,6 +166,17 @@ export async function POST(req: Request) {
                             },
                             required: ["filing_type"]
                         }
+                    },
+                    {
+                        name: "get_relevant_links",
+                        description: "Get official Companies House and GOV.UK links related to a specific topic or query. Use this tool whenever you need to provide the user with official guidance links.",
+                        parameters: {
+                            type: Type.OBJECT,
+                            properties: {
+                                topic: { type: Type.STRING, description: "The topic or question to find links for (e.g., 'filing confirmation statement', 'changing directors')." }
+                            },
+                            required: ["topic"]
+                        }
                     }
                 ]
             }];
@@ -203,6 +214,29 @@ export async function POST(req: Request) {
                         const feesDocPath = path.join(process.cwd(), 'documents', 'companies_house_fees.md');
                         const feesContext = fs.readFileSync(feesDocPath, 'utf8');
                         toolResultObj = { status: "success", data: feesContext };
+                    } else if (call.name === 'get_relevant_links') {
+                        const embedResponse = await ai.models.embedContent({
+                            model: "gemini-embedding-001",
+                            contents: args.topic,
+                            config: { outputDimensionality: 768 }
+                        });
+                        const queryEmbedding = embedResponse.embeddings?.[0]?.values;
+                        if (queryEmbedding) {
+                            const { data: documents, error: dbError } = await supabase.rpc("match_guidance", {
+                                query_embedding: queryEmbedding,
+                                match_count: 5,
+                            });
+                            if (dbError) throw dbError;
+                            toolResultObj = {
+                                status: "success",
+                                data: documents.map((doc: any) => ({
+                                    title: doc.title,
+                                    url: doc.url
+                                }))
+                            };
+                        } else {
+                            toolResultObj = { status: "error", message: "Failed to generate embedding" };
+                        }
                     } else if (call.name === 'escalate_to_live_agent') {
                         return NextResponse.json({
                             role: "assistant",
